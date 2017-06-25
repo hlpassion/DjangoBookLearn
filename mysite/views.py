@@ -1,8 +1,10 @@
 from django.template.loader import get_template
 from django.template import Template, Context
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, HttpResponseRedirect
 from django.shortcuts import render
 import datetime
+from mysite.form import ContactForm
+from django.core.mail import send_mail, get_connection
 
 
 def hello(request):
@@ -39,3 +41,29 @@ def ua_display(request):
     for k in sorted(values):
         html.append('<tr><td>%s</td><td>%s</td></tr>' % (k, k[-1]))
     return HttpResponse('<table>%s</table>' % '\n'.join(html))
+
+
+def contact(request):
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            con = get_connection('django.core.mail.backends.console.EmailBackend')
+            send_mail(
+                cd['subject'],
+                cd['message'],
+                cd.get('email', 'noreply@example.com'),
+                ['siteowner@example.com'],
+                connection=con
+            )
+            return HttpResponseRedirect('/contact/thanks/')
+    else:
+        form = ContactForm(
+            initial={'subject': 'I love your site!'}
+        )
+
+    return render(request, 'contact_form.html', {'form': form})
+
+
+def contact_thanks(request):
+    return HttpResponse('Thanks for contact us!!')
